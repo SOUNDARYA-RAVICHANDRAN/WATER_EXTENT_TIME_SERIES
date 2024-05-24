@@ -4,6 +4,8 @@ import geojson
 import matplotlib.pyplot as plt
 import pandas as pd
 
+#Earth Engine Authentication
+ee.Authenticate()
 # Initialize Earth Engine
 ee.Initialize()
 

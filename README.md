@@ -3,7 +3,7 @@ This Python script analyzes the surface water extent over a specified time range
 Instructions:
 
 1) Setup:
-Ensure you have the necessary Python libraries installed (e.g., ee, geopandas, geojson, matplotlib, `pandas).
+Ensure you have the necessary Python libraries installed (e.g., ee, geopandas, geojson, matplotlib, `pandas). (I have used JUPYTER)
 Install required libraries using pip:
 
 ( pip install earthengine-api geopandas geojson matplotlib pandas )

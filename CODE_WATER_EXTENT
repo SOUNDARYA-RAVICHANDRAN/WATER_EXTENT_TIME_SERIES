@@ -1,0 +1,80 @@
+import ee
+import geopandas as gpd
+import geojson
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Initialize Earth Engine
+ee.Initialize()
+
+def gdf_to_ee_geometry(gdf):
+    # Convert GeoDataFrame to GeoJSON
+    gdf_json = geojson.loads(gdf.to_json())
+    
+    # Convert GeoJSON to Earth Engine Geometry
+    ee_geometry = ee.Geometry.MultiPolygon(gdf_json['features'][0]['geometry']['coordinates'])
+    return ee_geometry
+
+# Load the GeoDataFrame
+gdf = gpd.read_file('path/to/your/inland_waterbody.geojson')
+
+# Convert GeoDataFrame to Earth Engine Geometry
+water_body_geom = gdf_to_ee_geometry(gdf)
+
+# Define the time range
+start_date = '1984-01-01'
+end_date = '2020-12-31'
+
+# Load the dataset
+dataset = ee.ImageCollection('JRC/GSW1_4/MonthlyHistory')
+
+# Define a function to compute water extent for a specific date
+def compute_water_extent(geometry, date):
+    # Select the image for the given date
+    image = dataset.filterDate(date, ee.Date(date).advance(1, 'month')).first()
+    
+    # Mask out non-water pixels
+    water_mask = image.select('water').eq(2)  # 2 indicates water
+    
+    # Compute area covered by water
+    area = water_mask.multiply(ee.Image.pixelArea()).reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=geometry,
+        scale=30,  # Adjust the scale as needed
+        maxPixels=1e9
+    )
+
+    # Get the area value
+    area_value = area.get('water')
+
+    return area_value
+
+# Generate a list of dates for each 10-year interval
+dates = pd.date_range(start=start_date, end=end_date, freq='10A').strftime('%Y-%m-%d').tolist()
+
+# Compute water extent for each date
+water_extent_values = []
+for date in dates:
+    water_extent = compute_water_extent(water_body_geom, date)
+    water_extent_values.append(water_extent.getInfo())
+
+# Convert the results to a Pandas DataFrame for easier plotting
+df = pd.DataFrame({
+    'Date': dates,
+    'Water Extent (sq km)': water_extent_values
+})
+
+# Plot the water extent time series
+plt.figure(figsize=(10, 6))
+plt.plot(df['Date'], df['Water Extent (sq km)'], marker='o', label='Water Extent')
+plt.xlabel('Time')
+plt.ylabel('Water Extent (sq km)')
+plt.title('Surface Water Extent Time Series (10-Year Intervals)')
+plt.legend()
+plt.grid(True)
+
+# Save the plot as an image
+plt.savefig('location/water_extent_time_series.png')
+
+# Show the plot
+plt.show()
